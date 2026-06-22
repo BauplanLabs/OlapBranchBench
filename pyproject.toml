@@ -1,0 +1,31 @@
+[project]
+name = "OlapBranchBench"
+version = "1.0.0"
+description = "Reproducible benchmarks on OLAP branching"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "bauplan~=0.1.14",
+    "databricks-sql-connector~=4.3.0",
+    "duckdb~=1.5.4",
+    "polars~=1.41.2",
+    "python-dotenv~=1.2.2",
+    "snowflake-connector-python~=4.6.0",
+    "typer~=0.26.7",
+    "uuid~=1.30",
+]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "ANN",
+    "B",
+    "E4",
+    "E7",
+    "E9",
+    "F",
+    "I",
+    "UP",
+]
