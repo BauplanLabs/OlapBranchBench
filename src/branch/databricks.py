@@ -43,6 +43,20 @@ def list_tables(cursor: Cursor, catalog: str, schema: str) -> list[str]:
     return [ident(str(row[1])) for row in cursor.fetchall()]
 
 
+def assert_tables_cloned(connection: Connection, branch_name: str, base_branch: str) -> None:
+    """Raise if the branch schema is missing any table from the source schema."""
+    catalog, schema = split_namespace(base_branch)
+    cursor = connection.cursor()
+    source = set(list_tables(cursor, catalog, schema))
+    cloned = set(list_tables(cursor, catalog, ident(branch_name)))
+    missing = source - cloned
+    if missing:
+        formatted = ", ".join(sorted(missing))
+        raise RuntimeError(
+            f"branch {catalog}.{branch_name} is missing {len(missing)} tables from {base_branch}: {formatted}"
+        )
+
+
 def create_branches(
     config: BranchConfig | None = None,
     results_path: str | Path = "results/branching.parquet",
@@ -86,6 +100,8 @@ def create_branches(
         """Drop the branch schema and all its cloned tables."""
         connection.cursor().execute(f"DROP SCHEMA {source_catalog}.{ident(branch_name)} CASCADE")
 
+    verify_branch = assert_tables_cloned if config.verify_clone else None
+
     return run_branch_experiment(
         backend="databricks",
         config=config,
@@ -95,4 +111,5 @@ def create_branches(
         delete_branch=delete_branch,
         results_path=results_path,
         close_client=lambda connection: connection.close(),
+        verify_branch=verify_branch,
     )

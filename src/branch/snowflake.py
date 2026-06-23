@@ -28,6 +28,23 @@ def connect() -> Connection:
     return cast(Connection, connection)
 
 
+def list_tables(cursor: Cursor, database: str) -> set[tuple[str, str]]:
+    """Return the (schema, table) pairs of every base table in a Snowflake database."""
+    cursor.execute(
+        f"SELECT table_schema, table_name FROM {ident(database)}.INFORMATION_SCHEMA.TABLES "
+        "WHERE table_type = 'BASE TABLE'"
+    )
+    return {(str(row[0]), str(row[1])) for row in cursor.fetchall()}
+
+
+def assert_tables_cloned(cursor: Cursor, branch_name: str, base_branch: str) -> None:
+    """Raise if the clone is missing any base table present in the source database."""
+    missing = list_tables(cursor, base_branch) - list_tables(cursor, branch_name)
+    if missing:
+        formatted = ", ".join(f"{schema}.{table}" for schema, table in sorted(missing))
+        raise RuntimeError(f"clone {branch_name} is missing {len(missing)} tables from {base_branch}: {formatted}")
+
+
 def create_branches(
     config: BranchConfig | None = None,
     results_path: str | Path = "results/branching.parquet",
@@ -58,6 +75,8 @@ def create_branches(
         """Drop the cloned database."""
         cursor.execute(f"DROP DATABASE IF EXISTS {ident(branch_name)}")
 
+    verify_branch = assert_tables_cloned if config.verify_clone else None
+
     return run_branch_experiment(
         backend="snowflake",
         config=config,
@@ -66,4 +85,5 @@ def create_branches(
         create_branch=create_branch,
         delete_branch=delete_branch,
         results_path=results_path,
+        verify_branch=verify_branch,
     )

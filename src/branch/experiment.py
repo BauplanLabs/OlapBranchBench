@@ -16,6 +16,8 @@ class BranchConfig(RunConfig):
     n_branches: int = 10
     base_branch: str = "main"
     chained: bool = False
+    verify_clone: bool = False
+    namespace: str = "tpch_1"
 
 
 def _timed_row[R](operation: str, branch_name: str, op: Callable[..., R], *args: object) -> tuple[dict[str, object], R]:
@@ -44,6 +46,7 @@ def run_branch_experiment[ClientT](
     delete_branch: Callable[[ClientT, str], None],
     results_path: str | Path = "results/branching.parquet",
     close_client: Callable[[ClientT], None] | None = None,
+    verify_branch: Callable[[ClientT, str, str], None] | None = None,
 ) -> pl.DataFrame:
     """Backend-agnostic branch benchmark, timing create and delete as separate operations."""
 
@@ -54,6 +57,9 @@ def run_branch_experiment[ClientT](
         # Name building stays out of both measured regions
         branch_name = build_branch_name(exp_id, str(uuid.uuid4()))
         create_row, _ = _timed_row("create_branch", branch_name, create_branch, client, branch_name, config.base_branch)
+        # Verification runs between create and delete, outside both measured regions
+        if verify_branch is not None:
+            verify_branch(client, branch_name, config.base_branch)
         delete_row, _ = _timed_row("delete_branch", branch_name, delete_branch, client, branch_name)
         return [create_row, delete_row]
 
@@ -64,7 +70,11 @@ def run_branch_experiment[ClientT](
         parent = config.base_branch
         for _ in range(config.n_branches):
             branch_name = build_branch_name(exp_id, str(uuid.uuid4()))
+            # Capture the source before parent is reassigned to the new branch
+            source = parent
             row, parent = _timed_row("create_branch", branch_name, create_branch, client, branch_name, parent)
+            if verify_branch is not None:
+                verify_branch(client, branch_name, source)
             rows.append(row)
             names.append(branch_name)
         # Delete children before parents so chained shallow clones are not orphaned
