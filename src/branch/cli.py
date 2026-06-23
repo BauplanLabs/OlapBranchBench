@@ -34,6 +34,9 @@ def benchmark(
     chained: Annotated[
         bool, typer.Option(help="Chain branches: each created from the previous one (forces serial)")
     ] = False,
+    verify_clone: Annotated[
+        bool, typer.Option(help="Snowflake only: assert every source table landed in each clone")
+    ] = False,
     results_path: Annotated[Path, typer.Option(help="Cumulative results parquet")] = Path("results/branching.parquet"),
 ) -> None:
     """Run the branch-creation benchmark on the chosen backend"""
@@ -45,6 +48,7 @@ def benchmark(
         jitter_ms=jitter_ms,
         base_branch=base_branch,
         chained=chained,
+        verify_clone=verify_clone,
     )
     BACKENDS[backend](config=config, results_path=results_path)
     typer.echo(f"results appended to {results_path}")
