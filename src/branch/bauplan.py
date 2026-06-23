@@ -25,6 +25,11 @@ def create_branches(
         raise RuntimeError("could not resolve the authenticated bauplan user")
     username = user.username
 
+    def client_factory() -> bauplan.Client:
+        client = bauplan.Client(api_key=os.getenv("BAUPLAN_API_KEY"))
+        _warmup = client.info()
+        return client
+
     def build_branch_name(exp_id: str, branch_id: str) -> str:
         """Bauplan branches need to be prefixed with username. Use experiment and branch uuid
         to create unique branch name."""
@@ -42,7 +47,7 @@ def create_branches(
     return run_branch_experiment(
         backend="bauplan",
         config=config,
-        client_factory=lambda: bauplan.Client(api_key=os.getenv("BAUPLAN_API_KEY")),
+        client_factory=client_factory,
         build_branch_name=build_branch_name,
         create_branch=create_branch,
         delete_branch=delete_branch,
