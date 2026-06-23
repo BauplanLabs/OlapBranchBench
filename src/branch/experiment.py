@@ -17,6 +17,7 @@ class BranchConfig(RunConfig):
     base_branch: str = "main"
     chained: bool = False
     verify_clone: bool = False
+    namespace: str = "tpch_1"
 
 
 def _timed_row[R](operation: str, branch_name: str, op: Callable[..., R], *args: object) -> tuple[dict[str, object], R]:

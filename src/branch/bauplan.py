@@ -18,6 +18,7 @@ def create_branches(
     """Branch-creation benchmark backed by the Bauplan client."""
 
     config = config or BranchConfig()
+    namespace = config.namespace
 
     # Username resolution is not part of what we measure
     user = bauplan.Client(api_key=os.getenv("BAUPLAN_API_KEY")).info().user
@@ -44,6 +45,20 @@ def create_branches(
         """Delete the branch."""
         client.delete_branch(branch=branch_name)
 
+    def verify_branch(client: bauplan.Client, branch_name: str, base_ref: str) -> None:
+        """Assert the new branch carries every table the source ref has in the benchmark namespace."""
+        source = {table.name for table in client.get_tables(base_ref, filter_by_namespace=namespace)}
+        # The namespace is assumed to exist; an empty source would make the check vacuous, so fail loudly
+        if not source:
+            raise RuntimeError(f"no tables found in {base_ref}.{namespace}; cannot verify branch {branch_name}")
+        branch = {table.name for table in client.get_tables(branch_name, filter_by_namespace=namespace)}
+        missing = source - branch
+        if missing:
+            formatted = ", ".join(sorted(missing))
+            raise RuntimeError(
+                f"branch {branch_name} is missing {len(missing)} tables from {base_ref}.{namespace}: {formatted}"
+            )
+
     return run_branch_experiment(
         backend="bauplan",
         config=config,
@@ -52,4 +67,5 @@ def create_branches(
         create_branch=create_branch,
         delete_branch=delete_branch,
         results_path=results_path,
+        verify_branch=verify_branch if config.verify_clone else None,
     )

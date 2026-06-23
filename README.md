@@ -94,7 +94,9 @@ uv run main.py bench snowflake <DATABASE>
 uv run main.py bench databricks <CATALOG>.<SCHEMA>
 ```
 
-The first argument is the backend and the second is what to branch from: a ref for bauplan, a source database for Snowflake, a source `catalog.schema` for Databricks. The options are `--n-branches`, `--parallel` / `--no-parallel`, `--n-workers`, `--jitter-ms`, `--chained` and `--results-path`; see `uv run main.py bench --help`. `--chained` makes each branch start from the previous one instead of from the fixed base (sequential only). Each run appends one row per timed operation to the results parquet, recording `duration_s` plus the wall-clock `started_at` and `ended_at` separately for the create and the delete.
+The first argument is the backend and the second is what to branch from: a ref for bauplan, a source database for Snowflake, a source `catalog.schema` for Databricks. The options are `--n-branches`, `--parallel` / `--no-parallel`, `--n-workers`, `--jitter-ms`, `--chained`, `--verify-clone`, `--namespace` and `--results-path`; see `uv run main.py bench --help`. `--chained` makes each branch start from the previous one instead of from the fixed base (sequential only). Each run appends one row per timed operation to the results parquet, recording `duration_s` plus the wall-clock `started_at` and `ended_at` separately for the create and the delete.
+
+`--verify-clone` checks, after each branch is created and before it is deleted, that every source table is present in the new branch, and aborts the run if any is missing. The check runs outside the timed region, so it does not affect the measurements.
 
 ## Branching across backends
 
