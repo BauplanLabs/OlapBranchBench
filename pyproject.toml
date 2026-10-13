@@ -10,7 +10,7 @@ dependencies = [
     "duckdb~=1.5.4",
     "polars~=1.41.2",
     "python-dotenv~=1.2.2",
-    "snowflake-connector-python~=4.6.0",
+    "snowflake-connector-python>=4.6,<4.8",
     "typer~=0.26.7",
     "uuid~=1.30",
 ]
